@@ -245,8 +245,14 @@ async fn u7_stacked_subquery_aliases_do_not_leak_the_inner_name() {
     // inner alias (the view name) while every column said `s.` —
     // `Binder Error: Referenced table "s" not found!`.
     let views = [
-        ("stg_cust", "SELECT c_custkey, c_name, c_nationkey, c_acctbal, c_mktsegment FROM customer WHERE c_acctbal > -999"),
-        ("stg_ord", "SELECT o_orderkey, o_custkey, o_totalprice, o_orderdate, o_orderstatus FROM orders WHERE o_orderstatus <> 'X'"),
+        (
+            "stg_cust",
+            "SELECT c_custkey, c_name, c_nationkey, c_acctbal, c_mktsegment FROM customer WHERE c_acctbal > -999",
+        ),
+        (
+            "stg_ord",
+            "SELECT o_orderkey, o_custkey, o_totalprice, o_orderdate, o_orderstatus FROM orders WHERE o_orderstatus <> 'X'",
+        ),
     ];
     let ctx = ctx_with(false, &views).await;
     let p = opt_plan(
@@ -428,7 +434,10 @@ async fn unsupported_nodes_are_errors_not_approximations() {
     let err = Unparser::new(&DuckDBDialect::new())
         .plan_to_sql(&p)
         .expect_err("EXPLAIN has no faithful rendering");
-    assert!(matches!(err, sqlser::SqlserError::Unsupported { .. }), "{err}");
+    assert!(
+        matches!(err, sqlser::SqlserError::Unsupported { .. }),
+        "{err}"
+    );
 }
 
 // -- drop-in API ------------------------------------------------------------

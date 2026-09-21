@@ -489,10 +489,9 @@ impl ExprCtx for BareCtx<'_, '_> {
     fn resolve_column(&self, col: &Column) -> Resolved {
         let ident = ast::Ident::with_quote('"', &col.name);
         Resolved::Ast(match &col.relation {
-            Some(r) => ast::Expr::CompoundIdentifier(vec![
-                ast::Ident::with_quote('"', r.table()),
-                ident,
-            ]),
+            Some(r) => {
+                ast::Expr::CompoundIdentifier(vec![ast::Ident::with_quote('"', r.table()), ident])
+            }
             None => ast::Expr::Identifier(ident),
         })
     }

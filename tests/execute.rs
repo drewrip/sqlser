@@ -44,13 +44,20 @@ fn duck(sql: &str) -> Option<String> {
 }
 
 fn pg(sql: &str) -> Option<String> {
-    let dsn = std::env::var("PG_DSN").unwrap_or_else(|_| {
-        "postgresql://runner:password@0.0.0.0:5432/benchmark".into()
-    });
+    let dsn = std::env::var("PG_DSN")
+        .unwrap_or_else(|_| "postgresql://runner:password@0.0.0.0:5432/benchmark".into());
     let schema = std::env::var("PG_SCHEMA").unwrap_or_else(|_| "tpch".into());
     let out = Command::new("psql")
-        .args([&dsn, "-tAF,", "-v", "ON_ERROR_STOP=1", "-c",
-               &format!("SET search_path = {schema}"), "-c", sql])
+        .args([
+            &dsn,
+            "-tAF,",
+            "-v",
+            "ON_ERROR_STOP=1",
+            "-c",
+            &format!("SET search_path = {schema}"),
+            "-c",
+            sql,
+        ])
         .output()
         .ok()?;
     if !out.status.success() {
@@ -99,7 +106,10 @@ async fn assert_same_on_duckdb(sql: &str) {
 
     let base = engine_or_skip!(duck, sql, "duckdb");
     let got = engine_or_skip!(duck, &ours, "duckdb");
-    assert!(!got.starts_with("ERROR"), "generated SQL failed:\n{ours}\n{got}");
+    assert!(
+        !got.starts_with("ERROR"),
+        "generated SQL failed:\n{ours}\n{got}"
+    );
     assert_eq!(
         normalize(&got),
         normalize(&base),
@@ -116,7 +126,10 @@ async fn assert_same_on_postgres(sql: &str) {
 
     let base = engine_or_skip!(pg, sql, "postgres");
     let got = engine_or_skip!(pg, &ours, "postgres");
-    assert!(!got.starts_with("ERROR"), "generated SQL failed:\n{ours}\n{got}");
+    assert!(
+        !got.starts_with("ERROR"),
+        "generated SQL failed:\n{ours}\n{got}"
+    );
     assert_eq!(
         normalize(&got),
         normalize(&base),
@@ -136,12 +149,10 @@ const Q18: &str = "SELECT c_name, c_custkey, o_orderkey, o_orderdate, o_totalpri
                    GROUP BY c_name, c_custkey, o_orderkey, o_orderdate, o_totalprice";
 
 /// U4: returned 15 rows where 10 were asked for.
-const LIMIT_OFFSET: &str =
-    "SELECT c_custkey FROM customer ORDER BY c_custkey LIMIT 10 OFFSET 5";
+const LIMIT_OFFSET: &str = "SELECT c_custkey FROM customer ORDER BY c_custkey LIMIT 10 OFFSET 5";
 
 /// U5: TPC-H Q22's shape. Returned 25 rows against a baseline of 3.
-const ANTI_JOIN_FILTER: &str =
-    "SELECT cc, count(*) FROM ( \
+const ANTI_JOIN_FILTER: &str = "SELECT cc, count(*) FROM ( \
        SELECT substring(c_phone FROM 1 FOR 2) AS cc, c_acctbal FROM customer \
        WHERE substring(c_phone FROM 1 FOR 2) IN ('13','31','23') \
          AND NOT EXISTS (SELECT 1 FROM orders WHERE o_custkey = c_custkey) \
@@ -208,8 +219,14 @@ async fn u7_view_inlining_duckdb() {
     // The OMP shape. Views are registered on both sides so the baseline and
     // the generated SQL see the same relations.
     let views = [
-        ("stg_cust", "SELECT c_custkey, c_name, c_nationkey, c_acctbal, c_mktsegment FROM customer WHERE c_acctbal > -999"),
-        ("stg_ord", "SELECT o_orderkey, o_custkey, o_totalprice, o_orderdate, o_orderstatus FROM orders WHERE o_orderstatus <> 'X'"),
+        (
+            "stg_cust",
+            "SELECT c_custkey, c_name, c_nationkey, c_acctbal, c_mktsegment FROM customer WHERE c_acctbal > -999",
+        ),
+        (
+            "stg_ord",
+            "SELECT o_orderkey, o_custkey, o_totalprice, o_orderdate, o_orderstatus FROM orders WHERE o_orderstatus <> 'X'",
+        ),
     ];
     let sql = "SELECT s.c_nationkey, count(*) AS n, sum(o.o_totalprice) AS t \
                FROM stg_cust s JOIN stg_ord o ON s.c_custkey = o.o_custkey \
@@ -227,7 +244,10 @@ async fn u7_view_inlining_duckdb() {
         .collect();
     let base = engine_or_skip!(duck, &format!("{setup}{sql}"), "duckdb");
     let got = engine_or_skip!(duck, &format!("{setup}{ours}"), "duckdb");
-    assert!(!got.starts_with("ERROR"), "generated SQL failed:\n{ours}\n{got}");
+    assert!(
+        !got.starts_with("ERROR"),
+        "generated SQL failed:\n{ours}\n{got}"
+    );
     assert_eq!(normalize(&got), normalize(&base), "sqlser: {ours}");
 }
 

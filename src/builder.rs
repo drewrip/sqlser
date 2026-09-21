@@ -366,9 +366,7 @@ impl SelectBuilder {
 
         if projection.is_empty() && !dialect.supports_empty_select_list() {
             projection.push(ast::SelectItem::ExprWithAlias {
-                expr: ast::Expr::Value(
-                    ast::Value::Number("1".to_string(), false).into(),
-                ),
+                expr: ast::Expr::Value(ast::Value::Number("1".to_string(), false).into()),
                 alias: ast::Ident::with_quote('"', "__sqlser_empty"),
             });
         }
@@ -396,10 +394,9 @@ impl SelectBuilder {
             selection: conjoin(self.wheres),
             connect_by: vec![],
             group_by: match self.group_by {
-                Some(exprs) => ast::GroupByExpr::Expressions(
-                    exprs,
-                    self.group_modifier.into_iter().collect(),
-                ),
+                Some(exprs) => {
+                    ast::GroupByExpr::Expressions(exprs, self.group_modifier.into_iter().collect())
+                }
                 None => ast::GroupByExpr::Expressions(vec![], vec![]),
             },
             cluster_by: vec![],
@@ -632,7 +629,10 @@ mod tests {
         b.set_limit(Some(number(10)), Some(number(5))).unwrap();
         let q = b.finish(&DuckDBDialect::new()).unwrap().to_string();
         assert!(q.contains("LIMIT 10 OFFSET 5"), "{q}");
-        assert!(!q.contains("15"), "the sort's internal count must not reach the output: {q}");
+        assert!(
+            !q.contains("15"),
+            "the sort's internal count must not reach the output: {q}"
+        );
     }
 
     #[test]
@@ -651,7 +651,10 @@ mod tests {
         assert!(q.starts_with("SELECT 1 AS "), "{q}");
 
         let b = SelectBuilder::over(table("customer", "r1"));
-        let q = b.finish(&crate::dialect::PostgreSqlDialect::new()).unwrap().to_string();
+        let q = b
+            .finish(&crate::dialect::PostgreSqlDialect::new())
+            .unwrap()
+            .to_string();
         assert!(q.starts_with("SELECT FROM"), "postgres allows it: {q}");
     }
 
@@ -671,7 +674,11 @@ mod tests {
             }
         }
         // The plan-schema keys survive, so parent nodes still resolve.
-        assert!(new_scope.index_of(&datafusion::common::Column::new(Some("t"), "c_custkey")).is_some());
+        assert!(
+            new_scope
+                .index_of(&datafusion::common::Column::new(Some("t"), "c_custkey"))
+                .is_some()
+        );
         // And the derived table is aliased, unconditionally.
         assert!(rel.alias.value.starts_with("__sqlser"));
     }
@@ -686,7 +693,11 @@ mod tests {
         assert_eq!(items.len(), 2);
         assert_eq!(idents[0].value, "n_name");
         assert_eq!(idents[1].value, "n_name__1");
-        assert!(!items.iter().any(|i| matches!(i, ast::SelectItem::Wildcard(_))));
+        assert!(
+            !items
+                .iter()
+                .any(|i| matches!(i, ast::SelectItem::Wildcard(_)))
+        );
     }
 
     #[test]

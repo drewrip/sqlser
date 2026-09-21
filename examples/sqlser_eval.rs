@@ -180,7 +180,12 @@ async fn roundtrip(ctx: &SessionContext, sql: &str, expect: &LogicalPlan) -> Opt
         Ok(p) => p,
         Err(e) => return Some(format!("re-plan: {e}")),
     };
-    let got: Vec<&String> = replanned.schema().fields().iter().map(|f| f.name()).collect();
+    let got: Vec<&String> = replanned
+        .schema()
+        .fields()
+        .iter()
+        .map(|f| f.name())
+        .collect();
     let want: Vec<&String> = expect.schema().fields().iter().map(|f| f.name()).collect();
     if got.len() != want.len() {
         return Some(format!("schema drift: {got:?} vs {want:?}"));
@@ -215,8 +220,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             sqlser::dialect::DuckDBDialect::new()
                 .with_division_style(sqlser::dialect::DivisionStyle::TruncCast),
         ),
-        other => sqlser::dialect_for_db(other)
-            .unwrap_or_else(|| panic!("unknown dialect {other}")),
+        other => sqlser::dialect_for_db(other).unwrap_or_else(|| panic!("unknown dialect {other}")),
     };
 
     let cols: Vec<Col> = serde_json::from_str(&std::fs::read_to_string(&args[1])?)?;

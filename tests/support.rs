@@ -16,14 +16,107 @@ pub fn tpch_tables() -> Vec<(&'static str, Vec<(&'static str, DataType)>)> {
     use DataType::*;
     let dec = Decimal128(15, 2);
     vec![
-        ("region", vec![("r_regionkey", Int32), ("r_name", Utf8), ("r_comment", Utf8)]),
-        ("nation", vec![("n_nationkey", Int32), ("n_name", Utf8), ("n_regionkey", Int32), ("n_comment", Utf8)]),
-        ("supplier", vec![("s_suppkey", Int32), ("s_name", Utf8), ("s_address", Utf8), ("s_nationkey", Int32), ("s_phone", Utf8), ("s_acctbal", dec.clone()), ("s_comment", Utf8)]),
-        ("customer", vec![("c_custkey", Int32), ("c_name", Utf8), ("c_address", Utf8), ("c_nationkey", Int32), ("c_phone", Utf8), ("c_acctbal", dec.clone()), ("c_mktsegment", Utf8), ("c_comment", Utf8)]),
-        ("part", vec![("p_partkey", Int32), ("p_name", Utf8), ("p_mfgr", Utf8), ("p_brand", Utf8), ("p_type", Utf8), ("p_size", Int32), ("p_container", Utf8), ("p_retailprice", dec.clone()), ("p_comment", Utf8)]),
-        ("partsupp", vec![("ps_partkey", Int32), ("ps_suppkey", Int32), ("ps_availqty", Int32), ("ps_supplycost", dec.clone()), ("ps_comment", Utf8)]),
-        ("orders", vec![("o_orderkey", Int32), ("o_custkey", Int32), ("o_orderstatus", Utf8), ("o_totalprice", dec.clone()), ("o_orderdate", Date32), ("o_orderpriority", Utf8), ("o_clerk", Utf8), ("o_shippriority", Int32), ("o_comment", Utf8)]),
-        ("lineitem", vec![("l_orderkey", Int32), ("l_partkey", Int32), ("l_suppkey", Int32), ("l_linenumber", Int32), ("l_quantity", dec.clone()), ("l_extendedprice", dec.clone()), ("l_discount", dec.clone()), ("l_tax", dec.clone()), ("l_returnflag", Utf8), ("l_linestatus", Utf8), ("l_shipdate", Date32), ("l_commitdate", Date32), ("l_receiptdate", Date32), ("l_shipinstruct", Utf8), ("l_shipmode", Utf8), ("l_comment", Utf8)]),
+        (
+            "region",
+            vec![
+                ("r_regionkey", Int32),
+                ("r_name", Utf8),
+                ("r_comment", Utf8),
+            ],
+        ),
+        (
+            "nation",
+            vec![
+                ("n_nationkey", Int32),
+                ("n_name", Utf8),
+                ("n_regionkey", Int32),
+                ("n_comment", Utf8),
+            ],
+        ),
+        (
+            "supplier",
+            vec![
+                ("s_suppkey", Int32),
+                ("s_name", Utf8),
+                ("s_address", Utf8),
+                ("s_nationkey", Int32),
+                ("s_phone", Utf8),
+                ("s_acctbal", dec.clone()),
+                ("s_comment", Utf8),
+            ],
+        ),
+        (
+            "customer",
+            vec![
+                ("c_custkey", Int32),
+                ("c_name", Utf8),
+                ("c_address", Utf8),
+                ("c_nationkey", Int32),
+                ("c_phone", Utf8),
+                ("c_acctbal", dec.clone()),
+                ("c_mktsegment", Utf8),
+                ("c_comment", Utf8),
+            ],
+        ),
+        (
+            "part",
+            vec![
+                ("p_partkey", Int32),
+                ("p_name", Utf8),
+                ("p_mfgr", Utf8),
+                ("p_brand", Utf8),
+                ("p_type", Utf8),
+                ("p_size", Int32),
+                ("p_container", Utf8),
+                ("p_retailprice", dec.clone()),
+                ("p_comment", Utf8),
+            ],
+        ),
+        (
+            "partsupp",
+            vec![
+                ("ps_partkey", Int32),
+                ("ps_suppkey", Int32),
+                ("ps_availqty", Int32),
+                ("ps_supplycost", dec.clone()),
+                ("ps_comment", Utf8),
+            ],
+        ),
+        (
+            "orders",
+            vec![
+                ("o_orderkey", Int32),
+                ("o_custkey", Int32),
+                ("o_orderstatus", Utf8),
+                ("o_totalprice", dec.clone()),
+                ("o_orderdate", Date32),
+                ("o_orderpriority", Utf8),
+                ("o_clerk", Utf8),
+                ("o_shippriority", Int32),
+                ("o_comment", Utf8),
+            ],
+        ),
+        (
+            "lineitem",
+            vec![
+                ("l_orderkey", Int32),
+                ("l_partkey", Int32),
+                ("l_suppkey", Int32),
+                ("l_linenumber", Int32),
+                ("l_quantity", dec.clone()),
+                ("l_extendedprice", dec.clone()),
+                ("l_discount", dec.clone()),
+                ("l_tax", dec.clone()),
+                ("l_returnflag", Utf8),
+                ("l_linestatus", Utf8),
+                ("l_shipdate", Date32),
+                ("l_commitdate", Date32),
+                ("l_receiptdate", Date32),
+                ("l_shipinstruct", Utf8),
+                ("l_shipmode", Utf8),
+                ("l_comment", Utf8),
+            ],
+        ),
     ]
 }
 

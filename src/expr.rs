@@ -122,7 +122,10 @@ pub trait ExprCtx {
     /// Resolve an explicit outer reference.
     fn resolve_outer(&mut self, col: &Column) -> Option<ast::Expr>;
     /// Lower a subquery plan into a complete `ast::Query`.
-    fn lower_subquery(&mut self, plan: &datafusion::logical_expr::LogicalPlan) -> Result<ast::Query>;
+    fn lower_subquery(
+        &mut self,
+        plan: &datafusion::logical_expr::LogicalPlan,
+    ) -> Result<ast::Query>;
     fn names(&mut self) -> &mut NameGen;
     /// The type of an expression in the current plan node's input schema.
     /// `None` when it cannot be determined, which callers must treat as
@@ -148,11 +151,7 @@ pub enum Resolved {
 /// nothing can fail on scope grounds.  A rendered AST is therefore never held
 /// across a seal, so it can never carry a qualifier from a scope that has
 /// since been replaced.
-pub fn render<C: ExprCtx>(
-    expr: &Expr,
-    ctx: &mut C,
-    dialect: &dyn Dialect,
-) -> Result<Rendered> {
+pub fn render<C: ExprCtx>(expr: &Expr, ctx: &mut C, dialect: &dyn Dialect) -> Result<Rendered> {
     // Aliases are stripped up front, not inside the walk below.  Unwrapping
     // one mid-`transform_down` would hand the walk a node it has already
     // passed, so the column underneath would never be resolved and would reach
@@ -418,18 +417,24 @@ mod tests {
 
         let duck = crate::dialect::DuckDBDialect::new();
         assert_eq!(
-            apply_division_style(duck_divide.clone(), &duck).unwrap().to_string(),
+            apply_division_style(duck_divide.clone(), &duck)
+                .unwrap()
+                .to_string(),
             "a // b",
             "DuckDB's // is the faithful spelling and is left alone"
         );
 
         let pg = crate::dialect::PostgreSqlDialect::new();
         assert_eq!(
-            apply_division_style(duck_divide.clone(), &pg).unwrap().to_string(),
+            apply_division_style(duck_divide.clone(), &pg)
+                .unwrap()
+                .to_string(),
             "a / b"
         );
         assert_eq!(
-            apply_division_style(float_divide.clone(), &pg).unwrap().to_string(),
+            apply_division_style(float_divide.clone(), &pg)
+                .unwrap()
+                .to_string(),
             "a / b",
             "plain division is never touched"
         );

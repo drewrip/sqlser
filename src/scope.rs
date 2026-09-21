@@ -239,18 +239,17 @@ impl Scope {
             return Resolution::NotFound;
         };
         match &entry.addr {
-            ColumnAddr::Column { rel, col } => Resolution::Ast(ast::Expr::CompoundIdentifier(
-                vec![rel.clone(), col.clone()],
-            )),
+            ColumnAddr::Column { rel, col } => {
+                Resolution::Ast(ast::Expr::CompoundIdentifier(vec![
+                    rel.clone(),
+                    col.clone(),
+                ]))
+            }
             ColumnAddr::Inline { ast } => Resolution::Ast((**ast).clone()),
             ColumnAddr::Projected { alias, ast, kind } => match (clause, kind) {
                 // Evaluated before the select list exists.
-                (Clause::From, _) => {
-                    Resolution::NeedsSeal("join ON cannot see the select list")
-                }
-                (Clause::Where, _) => {
-                    Resolution::NeedsSeal("WHERE cannot see the select list")
-                }
+                (Clause::From, _) => Resolution::NeedsSeal("join ON cannot see the select list"),
+                (Clause::Where, _) => Resolution::NeedsSeal("WHERE cannot see the select list"),
                 (Clause::GroupBy, _) => {
                     Resolution::NeedsSeal("GROUP BY cannot see the select list")
                 }
@@ -304,10 +303,17 @@ impl OuterScopes {
     /// select-list alias is not visible inside a subquery in any dialect.
     pub fn resolve(&self, col: &Column) -> Option<ast::Expr> {
         for scope in self.stack.iter().rev() {
-            let Some(i) = scope.index_of(col) else { continue };
-            let Some(entry) = scope.entry(i) else { continue };
+            let Some(i) = scope.index_of(col) else {
+                continue;
+            };
+            let Some(entry) = scope.entry(i) else {
+                continue;
+            };
             if let ColumnAddr::Column { rel, col } = &entry.addr {
-                return Some(ast::Expr::CompoundIdentifier(vec![rel.clone(), col.clone()]));
+                return Some(ast::Expr::CompoundIdentifier(vec![
+                    rel.clone(),
+                    col.clone(),
+                ]));
             }
         }
         None
@@ -345,7 +351,12 @@ mod tests {
     fn a_column_resolves_to_its_relation_alias_not_its_plan_qualifier() {
         // This is the U1 shape: the plan says `customer.c_custkey`, but the
         // relation in scope is a generated alias.
-        let s = Scope::from_entries(vec![col_entry("customer", "c_custkey", "__sqlser_r1", "c_custkey")]);
+        let s = Scope::from_entries(vec![col_entry(
+            "customer",
+            "c_custkey",
+            "__sqlser_r1",
+            "c_custkey",
+        )]);
         let got = s.resolve(&Column::new(Some("customer"), "c_custkey"), Clause::Select);
         match got {
             Resolution::Ast(ast::Expr::CompoundIdentifier(parts)) => {
@@ -361,20 +372,36 @@ mod tests {
         // U7: `SubqueryAlias: s` over `SubqueryAlias: stg_cust` over a scan.
         // Both rewrites keep pointing at the scan's generated alias, and the
         // outermost name — the one the query used — is what resolves.
-        let scan = Scope::from_entries(vec![col_entry("customer", "c_custkey", "__sqlser_r1", "c_custkey")]);
+        let scan = Scope::from_entries(vec![col_entry(
+            "customer",
+            "c_custkey",
+            "__sqlser_r1",
+            "c_custkey",
+        )]);
         let inner = scan.requalify(&TableReference::bare("stg_cust"));
         let outer = inner.requalify(&TableReference::bare("s"));
 
         let got = outer.resolve(&Column::new(Some("s"), "c_custkey"), Clause::Select);
         match got {
             Resolution::Ast(ast::Expr::CompoundIdentifier(parts)) => {
-                assert_eq!(parts[0].value, "__sqlser_r1", "must address the real relation");
+                assert_eq!(
+                    parts[0].value, "__sqlser_r1",
+                    "must address the real relation"
+                );
             }
             other => panic!("expected a compound identifier, got {other:?}"),
         }
         // The stale inner name is gone from the keys.
-        assert!(outer.by_key.contains_key(&(Some(TableReference::bare("s")), "c_custkey".into())));
-        assert!(!outer.by_key.contains_key(&(Some(TableReference::bare("stg_cust")), "c_custkey".into())));
+        assert!(
+            outer
+                .by_key
+                .contains_key(&(Some(TableReference::bare("s")), "c_custkey".into()))
+        );
+        assert!(
+            !outer
+                .by_key
+                .contains_key(&(Some(TableReference::bare("stg_cust")), "c_custkey".into()))
+        );
     }
 
     #[test]
@@ -383,9 +410,18 @@ mod tests {
         let c = Column::new_unqualified("rn");
 
         // U8: filtering on a window column cannot happen in WHERE.
-        assert!(matches!(s.resolve(&c, Clause::Where), Resolution::NeedsSeal(_)));
-        assert!(matches!(s.resolve(&c, Clause::From), Resolution::NeedsSeal(_)));
-        assert!(matches!(s.resolve(&c, Clause::Having), Resolution::NeedsSeal(_)));
+        assert!(matches!(
+            s.resolve(&c, Clause::Where),
+            Resolution::NeedsSeal(_)
+        ));
+        assert!(matches!(
+            s.resolve(&c, Clause::From),
+            Resolution::NeedsSeal(_)
+        ));
+        assert!(matches!(
+            s.resolve(&c, Clause::Having),
+            Resolution::NeedsSeal(_)
+        ));
         // But QUALIFY and SELECT may inline it, and ORDER BY may use the alias.
         assert!(matches!(s.resolve(&c, Clause::Window), Resolution::Ast(_)));
         assert!(matches!(s.resolve(&c, Clause::Select), Resolution::Ast(_)));
@@ -400,7 +436,10 @@ mod tests {
         let s = Scope::from_entries(vec![projected("n", "n", ProjKind::Aggregate)]);
         let c = Column::new_unqualified("n");
         assert!(matches!(s.resolve(&c, Clause::Having), Resolution::Ast(_)));
-        assert!(matches!(s.resolve(&c, Clause::Where), Resolution::NeedsSeal(_)));
+        assert!(matches!(
+            s.resolve(&c, Clause::Where),
+            Resolution::NeedsSeal(_)
+        ));
     }
 
     #[test]
@@ -417,7 +456,10 @@ mod tests {
     fn outer_scopes_resolve_correlations_to_the_generated_alias() {
         let mut outers = OuterScopes::new();
         outers.push(Scope::from_entries(vec![col_entry(
-            "customer", "c_custkey", "__sqlser_r1", "c_custkey",
+            "customer",
+            "c_custkey",
+            "__sqlser_r1",
+            "c_custkey",
         )]));
         let got = outers.resolve(&Column::new(Some("customer"), "c_custkey"));
         match got {

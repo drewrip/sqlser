@@ -67,8 +67,16 @@ pub struct GroupingSupport {
 }
 
 impl GroupingSupport {
-    pub const ALL: Self = Self { rollup: true, cube: true, grouping_sets: true };
-    pub const NONE: Self = Self { rollup: false, cube: false, grouping_sets: false };
+    pub const ALL: Self = Self {
+        rollup: true,
+        cube: true,
+        grouping_sets: true,
+    };
+    pub const NONE: Self = Self {
+        rollup: false,
+        cube: false,
+        grouping_sets: false,
+    };
 }
 
 /// Everything the plan walk needs to know about the target engine.
@@ -183,13 +191,15 @@ fn duckdb_df_dialect() -> df::DuckDBDialect {
     use datafusion::sql::unparser::Unparser;
     df::DuckDBDialect::new().with_custom_scalar_overrides(vec![(
         "btrim",
-        Box::new(|unparser: &Unparser, args: &[datafusion::logical_expr::Expr]| {
-            let rendered = args
-                .iter()
-                .map(|a| unparser.expr_to_sql(a))
-                .collect::<datafusion::error::Result<Vec<_>>>()?;
-            Ok(Some(call("trim", rendered)))
-        }) as df::ScalarFnToSqlHandler,
+        Box::new(
+            |unparser: &Unparser, args: &[datafusion::logical_expr::Expr]| {
+                let rendered = args
+                    .iter()
+                    .map(|a| unparser.expr_to_sql(a))
+                    .collect::<datafusion::error::Result<Vec<_>>>()?;
+                Ok(Some(call("trim", rendered)))
+            },
+        ) as df::ScalarFnToSqlHandler,
     )])
 }
 
@@ -230,16 +240,30 @@ macro_rules! simple_dialect {
 }
 
 simple_dialect!(DefaultDialect, df::DefaultDialect {}, {
-    fn quote(&self) -> Option<char> { None }
-    fn supports_empty_select_list(&self) -> bool { false }
+    fn quote(&self) -> Option<char> {
+        None
+    }
+    fn supports_empty_select_list(&self) -> bool {
+        false
+    }
 });
 
 simple_dialect!(PostgreSqlDialect, df::PostgreSqlDialect {}, {
-    fn supports_empty_select_list(&self) -> bool { true }
-    fn supports_qualify(&self) -> bool { false }
-    fn distinct_on_style(&self) -> DistinctOnStyle { DistinctOnStyle::Native }
-    fn division_style(&self) -> DivisionStyle { DivisionStyle::Native }
-    fn unnest_in_select_list(&self) -> bool { true }
+    fn supports_empty_select_list(&self) -> bool {
+        true
+    }
+    fn supports_qualify(&self) -> bool {
+        false
+    }
+    fn distinct_on_style(&self) -> DistinctOnStyle {
+        DistinctOnStyle::Native
+    }
+    fn division_style(&self) -> DivisionStyle {
+        DivisionStyle::Native
+    }
+    fn unnest_in_select_list(&self) -> bool {
+        true
+    }
 });
 
 /// DuckDB.
@@ -288,44 +312,94 @@ impl std::fmt::Debug for DuckDBDialect {
 }
 
 impl Dialect for DuckDBDialect {
-    fn df(&self) -> &dyn df::Dialect { self.df.as_ref() }
-    fn supports_qualify(&self) -> bool { true }
-    fn supports_empty_select_list(&self) -> bool { false }
-    fn distinct_on_style(&self) -> DistinctOnStyle { DistinctOnStyle::Native }
-    fn division_style(&self) -> DivisionStyle { self.division_style }
-    fn unnest_as_table_factor(&self) -> bool { true }
-    fn unnest_in_select_list(&self) -> bool { true }
+    fn df(&self) -> &dyn df::Dialect {
+        self.df.as_ref()
+    }
+    fn supports_qualify(&self) -> bool {
+        true
+    }
+    fn supports_empty_select_list(&self) -> bool {
+        false
+    }
+    fn distinct_on_style(&self) -> DistinctOnStyle {
+        DistinctOnStyle::Native
+    }
+    fn division_style(&self) -> DivisionStyle {
+        self.division_style
+    }
+    fn unnest_as_table_factor(&self) -> bool {
+        true
+    }
+    fn unnest_in_select_list(&self) -> bool {
+        true
+    }
 }
 
 simple_dialect!(MySqlDialect, df::MySqlDialect {}, {
-    fn quote(&self) -> Option<char> { Some('`') }
-    fn supports_qualify(&self) -> bool { false }
-    fn grouping_support(&self) -> GroupingSupport {
-        GroupingSupport { rollup: true, cube: false, grouping_sets: false }
+    fn quote(&self) -> Option<char> {
+        Some('`')
     }
-    fn supports_column_alias_in_table_alias(&self) -> bool { false }
-    fn supports_select_without_from(&self) -> bool { false }
-    fn null_safe_equality(&self) -> NullSafeEquality { NullSafeEquality::Spaceship }
+    fn supports_qualify(&self) -> bool {
+        false
+    }
+    fn grouping_support(&self) -> GroupingSupport {
+        GroupingSupport {
+            rollup: true,
+            cube: false,
+            grouping_sets: false,
+        }
+    }
+    fn supports_column_alias_in_table_alias(&self) -> bool {
+        false
+    }
+    fn supports_select_without_from(&self) -> bool {
+        false
+    }
+    fn null_safe_equality(&self) -> NullSafeEquality {
+        NullSafeEquality::Spaceship
+    }
 });
 
 simple_dialect!(SqliteDialect, df::SqliteDialect {}, {
-    fn supports_qualify(&self) -> bool { false }
-    fn grouping_support(&self) -> GroupingSupport { GroupingSupport::NONE }
-    fn supports_column_alias_in_table_alias(&self) -> bool { false }
+    fn supports_qualify(&self) -> bool {
+        false
+    }
+    fn grouping_support(&self) -> GroupingSupport {
+        GroupingSupport::NONE
+    }
+    fn supports_column_alias_in_table_alias(&self) -> bool {
+        false
+    }
 });
 
 simple_dialect!(BigQueryDialect, df::BigQueryDialect {}, {
-    fn quote(&self) -> Option<char> { Some('`') }
-    fn supports_qualify(&self) -> bool { true }
-    fn unnest_as_table_factor(&self) -> bool { true }
-    fn unnest_in_select_list(&self) -> bool { true }
-    fn supports_column_alias_in_table_alias(&self) -> bool { false }
+    fn quote(&self) -> Option<char> {
+        Some('`')
+    }
+    fn supports_qualify(&self) -> bool {
+        true
+    }
+    fn unnest_as_table_factor(&self) -> bool {
+        true
+    }
+    fn unnest_in_select_list(&self) -> bool {
+        true
+    }
+    fn supports_column_alias_in_table_alias(&self) -> bool {
+        false
+    }
 });
 
 simple_dialect!(SnowflakeDialect, df::SnowflakeDialect {}, {
-    fn supports_qualify(&self) -> bool { true }
-    fn unnest_as_table_factor(&self) -> bool { true }
-    fn unnest_in_select_list(&self) -> bool { true }
+    fn supports_qualify(&self) -> bool {
+        true
+    }
+    fn unnest_as_table_factor(&self) -> bool {
+        true
+    }
+    fn unnest_in_select_list(&self) -> bool {
+        true
+    }
 });
 
 /// A dialect assembled at runtime, for engines with no built-in impl.
@@ -354,18 +428,42 @@ impl std::fmt::Debug for CustomDialect {
 }
 
 impl Dialect for CustomDialect {
-    fn df(&self) -> &dyn df::Dialect { self.df.as_ref() }
-    fn quote(&self) -> Option<char> { self.quote }
-    fn supports_empty_select_list(&self) -> bool { self.supports_empty_select_list }
-    fn supports_qualify(&self) -> bool { self.supports_qualify }
-    fn supports_column_alias_in_table_alias(&self) -> bool { self.supports_column_alias_in_table_alias }
-    fn supports_select_without_from(&self) -> bool { self.supports_select_without_from }
-    fn distinct_on_style(&self) -> DistinctOnStyle { self.distinct_on_style }
-    fn grouping_support(&self) -> GroupingSupport { self.grouping_support }
-    fn division_style(&self) -> DivisionStyle { self.division_style }
-    fn unnest_as_table_factor(&self) -> bool { self.unnest_as_table_factor }
-    fn unnest_in_select_list(&self) -> bool { self.unnest_in_select_list }
-    fn null_safe_equality(&self) -> NullSafeEquality { self.null_safe_equality }
+    fn df(&self) -> &dyn df::Dialect {
+        self.df.as_ref()
+    }
+    fn quote(&self) -> Option<char> {
+        self.quote
+    }
+    fn supports_empty_select_list(&self) -> bool {
+        self.supports_empty_select_list
+    }
+    fn supports_qualify(&self) -> bool {
+        self.supports_qualify
+    }
+    fn supports_column_alias_in_table_alias(&self) -> bool {
+        self.supports_column_alias_in_table_alias
+    }
+    fn supports_select_without_from(&self) -> bool {
+        self.supports_select_without_from
+    }
+    fn distinct_on_style(&self) -> DistinctOnStyle {
+        self.distinct_on_style
+    }
+    fn grouping_support(&self) -> GroupingSupport {
+        self.grouping_support
+    }
+    fn division_style(&self) -> DivisionStyle {
+        self.division_style
+    }
+    fn unnest_as_table_factor(&self) -> bool {
+        self.unnest_as_table_factor
+    }
+    fn unnest_in_select_list(&self) -> bool {
+        self.unnest_in_select_list
+    }
+    fn null_safe_equality(&self) -> NullSafeEquality {
+        self.null_safe_equality
+    }
 }
 
 /// Builder for [`CustomDialect`].  Starts from conservative defaults: no

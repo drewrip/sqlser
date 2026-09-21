@@ -36,10 +36,9 @@ impl Serializer<'_> {
         let alias = self.names.fresh_rel();
         let factor = if self.cte_names.iter().any(|n| *n == scan.table_name.table()) {
             table_factor(
-                ast::ObjectName(vec![ast::ObjectNamePart::Identifier(ast::Ident::with_quote(
-                    '"',
-                    scan.table_name.table(),
-                ))]),
+                ast::ObjectName(vec![ast::ObjectNamePart::Identifier(
+                    ast::Ident::with_quote('"', scan.table_name.table()),
+                )]),
                 alias.clone(),
             )
         } else {
@@ -165,7 +164,10 @@ impl Serializer<'_> {
         };
 
         Ok(Lowered {
-            builder: SelectBuilder::over(Relation { factor, alias: alias.clone() }),
+            builder: SelectBuilder::over(Relation {
+                factor,
+                alias: alias.clone(),
+            }),
             scope: scope_over_relation(&values.schema, &alias),
             schema: Arc::clone(&values.schema),
         })
@@ -281,18 +283,22 @@ impl Serializer<'_> {
             return Ok(l);
         }
 
-        let clause = if aggregated { Clause::Having } else { Clause::Where };
+        let clause = if aggregated {
+            Clause::Having
+        } else {
+            Clause::Where
+        };
         if !aggregated && l.builder.stage() > Stage::Where {
             self.seal_into(&mut l)?;
         }
 
-        let clause = if l.builder.has_agg() { clause } else { Clause::Where };
-        let preds = self.render_all(
-            &mut l,
-            std::slice::from_ref(&f.predicate),
-            clause,
-            "Filter",
-        )?;
+        let clause = if l.builder.has_agg() {
+            clause
+        } else {
+            Clause::Where
+        };
+        let preds =
+            self.render_all(&mut l, std::slice::from_ref(&f.predicate), clause, "Filter")?;
         for p in preds {
             // Accumulate. There is no setter, so whatever the input
             // contributed survives — U5 is unrepresentable here.
@@ -335,8 +341,7 @@ impl Serializer<'_> {
         if group_asts.is_empty() {
             l.builder.mark_aggregated();
         } else {
-            l.builder
-                .set_group_by(grouping.to_sql(&group_asts), None)?;
+            l.builder.set_group_by(grouping.to_sql(&group_asts), None)?;
         }
 
         // `Aggregate::try_new` builds its schema as group_expr, then — for a
@@ -431,15 +436,17 @@ impl Serializer<'_> {
             self.seal_into(&mut l)?;
         }
 
-        let render_opt = |ser: &mut Self, e: &Option<Box<Expr>>, l: &mut Lowered| -> Result<Option<ast::Expr>> {
-            match e {
-                None => Ok(None),
-                Some(e) => {
-                    let v = ser.render_all(l, std::slice::from_ref(e), Clause::Select, "Limit")?;
-                    Ok(v.into_iter().next())
+        let render_opt =
+            |ser: &mut Self, e: &Option<Box<Expr>>, l: &mut Lowered| -> Result<Option<ast::Expr>> {
+                match e {
+                    None => Ok(None),
+                    Some(e) => {
+                        let v =
+                            ser.render_all(l, std::slice::from_ref(e), Clause::Select, "Limit")?;
+                        Ok(v.into_iter().next())
+                    }
                 }
-            }
-        };
+            };
         let fetch = render_opt(self, &lim.fetch, &mut l)?;
         let skip = render_opt(self, &lim.skip, &mut l)?;
         let skip = skip.filter(|s| s.to_string() != "0");
@@ -616,7 +623,10 @@ impl Serializer<'_> {
             alias.clone(),
         );
         Ok(Lowered {
-            builder: SelectBuilder::over(Relation { factor, alias: alias.clone() }),
+            builder: SelectBuilder::over(Relation {
+                factor,
+                alias: alias.clone(),
+            }),
             scope: scope_over_relation(&r.schema, &alias),
             schema: Arc::clone(&r.schema),
         })
@@ -766,7 +776,10 @@ impl Serializer<'_> {
         };
 
         Ok(Lowered {
-            builder: SelectBuilder::over(Relation { factor, alias: alias.clone() }),
+            builder: SelectBuilder::over(Relation {
+                factor,
+                alias: alias.clone(),
+            }),
             scope: scope_over_relation(&u.schema, &alias),
             schema: Arc::clone(&u.schema),
         })
@@ -796,7 +809,9 @@ impl Serializer<'_> {
                     match l.scope.resolve_index(i, Clause::Select) {
                         crate::scope::Resolution::Ast(a) => a,
                         _ => {
-                            return Err(SqlserError::invariant("union branch column unaddressable"));
+                            return Err(SqlserError::invariant(
+                                "union branch column unaddressable",
+                            ));
                         }
                     }
                 }
@@ -1017,7 +1032,12 @@ impl Serializer<'_> {
             schema: j.left.schema().clone(),
         };
         let probe = self
-            .render_all(&mut probe_l, std::slice::from_ref(probe_expr), Clause::Where, "NotIn")?
+            .render_all(
+                &mut probe_l,
+                std::slice::from_ref(probe_expr),
+                Clause::Where,
+                "NotIn",
+            )?
             .remove(0);
 
         let mut inner_l = self.lower(inner)?;
@@ -1027,7 +1047,12 @@ impl Serializer<'_> {
             self.seal_into(&mut inner_l)?;
         }
         let key = self
-            .render_all(&mut inner_l, std::slice::from_ref(key_expr), Clause::Select, "NotIn")?
+            .render_all(
+                &mut inner_l,
+                std::slice::from_ref(key_expr),
+                Clause::Select,
+                "NotIn",
+            )?
             .remove(0);
         inner_l
             .builder
@@ -1081,9 +1106,11 @@ impl Serializer<'_> {
             }
 
             if !inner_l.builder.select_is_set() {
-                inner_l.builder.set_select(vec![ast::SelectItem::UnnamedExpr(
-                    ast::Expr::Value(ast::Value::Number("1".into(), false).into()),
-                )])?;
+                inner_l
+                    .builder
+                    .set_select(vec![ast::SelectItem::UnnamedExpr(ast::Expr::Value(
+                        ast::Value::Number("1".into(), false).into(),
+                    ))])?;
             }
             inner_l.builder.finish(self.dialect)
         })();
