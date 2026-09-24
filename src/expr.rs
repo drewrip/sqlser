@@ -217,6 +217,23 @@ pub fn render<C: ExprCtx>(expr: &Expr, ctx: &mut C, dialect: &dyn Dialect) -> Re
                     };
                     Ok(punch(&mut holes, ctx, trunc_div(left, right)))
                 }
+                // DataFusion plans `extract('year' from x)` — a quoted field —
+                // as `date_part(Utf8("'year'"), x)`, keeping the quotes in the
+                // string. Its own `date_part` strips them when it executes, so
+                // the plan means `year`; rendered as-is it becomes
+                // `date_part('''year''', x)`, which DuckDB and Postgres reject.
+                // Every dialect gets the fix, so it lives here, not in one.
+                Expr::ScalarFunction(f) if f.func.name() == "date_part" => {
+                    match unquoted_date_part_field(&f.args) {
+                        Some(args) => Ok(Transformed::yes(Expr::ScalarFunction(
+                            datafusion::logical_expr::expr::ScalarFunction::new_udf(
+                                std::sync::Arc::clone(&f.func),
+                                args,
+                            ),
+                        ))),
+                        None => Ok(Transformed::no(e)),
+                    }
+                }
                 Expr::ScalarSubquery(sq) => {
                     let q = ctx.lower_subquery(&sq.subquery).map_err(to_df)?;
                     Ok(punch(&mut holes, ctx, ast::Expr::Subquery(Box::new(q))))
@@ -319,6 +336,33 @@ fn apply_division_style(mut expr: ast::Expr, dialect: &dyn Dialect) -> Result<as
         ControlFlow::Continue(())
     });
     Ok(expr)
+}
+
+/// `date_part`'s arguments with a quoted field literal (`'year'`, as planned
+/// from `extract('year' from x)`) unquoted, or `None` when there is nothing to
+/// fix.
+fn unquoted_date_part_field(args: &[Expr]) -> Option<Vec<Expr>> {
+    use datafusion::scalar::ScalarValue;
+
+    let (Expr::Literal(value, metadata), rest) = args.split_first()? else {
+        return None;
+    };
+    let field = match value {
+        ScalarValue::Utf8(Some(s))
+        | ScalarValue::LargeUtf8(Some(s))
+        | ScalarValue::Utf8View(Some(s)) => s,
+        _ => return None,
+    };
+    let inner = field.strip_prefix('\'')?.strip_suffix('\'')?;
+
+    let unquoted = match value {
+        ScalarValue::LargeUtf8(_) => ScalarValue::LargeUtf8(Some(inner.to_string())),
+        ScalarValue::Utf8View(_) => ScalarValue::Utf8View(Some(inner.to_string())),
+        _ => ScalarValue::Utf8(Some(inner.to_string())),
+    };
+    let mut fixed = vec![Expr::Literal(unquoted, metadata.clone())];
+    fixed.extend(rest.iter().cloned());
+    Some(fixed)
 }
 
 /// `CAST(trunc(a / b) AS BIGINT)` — truncation toward zero, which is what both

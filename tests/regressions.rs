@@ -425,6 +425,27 @@ async fn u13_recursive_queries_are_supported() {
     assert!(sql.contains("UNION ALL"), "{sql}");
 }
 
+// -- U14 --------------------------------------------------------------------
+
+#[tokio::test]
+async fn u14_quoted_extract_field_is_unquoted() {
+    // DataFusion plans `extract('year' from x)` as `date_part(Utf8("'year'"),
+    // x)`, quotes included; rendered as-is that is `date_part('''year''', x)`,
+    // which DuckDB rejects with `extract specifier "'year'" not recognized`.
+    let ctx = ctx().await;
+    let p = plan(
+        &ctx,
+        "SELECT extract('year' from o_orderdate) AS y, extract(month from o_orderdate) AS m \
+         FROM orders",
+    )
+    .await;
+    for sql in [duck(&p), pg(&p)] {
+        assert!(!sql.contains("'''"), "quoted field leaked:\n{sql}");
+        assert!(sql.contains("'year'"), "{sql}");
+        assert!(sql.to_lowercase().contains("'month'"), "{sql}");
+    }
+}
+
 // -- the standing contract --------------------------------------------------
 
 #[tokio::test]
