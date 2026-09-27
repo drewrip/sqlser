@@ -234,6 +234,17 @@ pub fn render<C: ExprCtx>(expr: &Expr, ctx: &mut C, dialect: &dyn Dialect) -> Re
                         None => Ok(Transformed::no(e)),
                     }
                 }
+                // U15: SQL's niladic datetime keywords (`current_date`,
+                // `current_time`) are planned as zero-argument UDFs, which the
+                // delegate renders as `current_date()` -- a syntax error in
+                // Postgres and SQLite. The bare keyword is standard SQL, every
+                // target accepts it, and DataFusion parses it back, so every
+                // dialect gets it.
+                Expr::ScalarFunction(f)
+                    if f.args.is_empty() && NILADIC_KEYWORDS.contains(&f.func.name()) =>
+                {
+                    Ok(punch(&mut holes, ctx, niladic_keyword(f.func.name())))
+                }
                 Expr::ScalarSubquery(sq) => {
                     let q = ctx.lower_subquery(&sq.subquery).map_err(to_df)?;
                     Ok(punch(&mut holes, ctx, ast::Expr::Subquery(Box::new(q))))
@@ -336,6 +347,27 @@ fn apply_division_style(mut expr: ast::Expr, dialect: &dyn Dialect) -> Result<as
         ControlFlow::Continue(())
     });
     Ok(expr)
+}
+
+/// DataFusion functions whose SQL spelling is a bare keyword (U15).
+///
+/// `now` is left out: DataFusion folds `current_timestamp` into it, and `now()`
+/// is a function in both DuckDB and Postgres, so it already renders correctly.
+const NILADIC_KEYWORDS: [&str; 2] = ["current_date", "current_time"];
+
+/// `name` as a bare keyword: a function with no argument list at all, which
+/// sqlparser prints without parentheses -- exactly how it parses `current_date`.
+fn niladic_keyword(name: &str) -> ast::Expr {
+    ast::Expr::Function(ast::Function {
+        name: ast::ObjectName(vec![ast::ObjectNamePart::Identifier(ast::Ident::new(name))]),
+        uses_odbc_syntax: false,
+        parameters: ast::FunctionArguments::None,
+        args: ast::FunctionArguments::None,
+        filter: None,
+        null_treatment: None,
+        over: None,
+        within_group: vec![],
+    })
 }
 
 /// `date_part`'s arguments with a quoted field literal (`'year'`, as planned

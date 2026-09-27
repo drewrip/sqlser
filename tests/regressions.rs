@@ -446,6 +446,40 @@ async fn u14_quoted_extract_field_is_unquoted() {
     }
 }
 
+// -- U15 --------------------------------------------------------------------
+
+#[tokio::test]
+async fn u15_niladic_keywords_render_bare() {
+    // DataFusion plans the keyword `current_date` as a zero-argument UDF, and
+    // its renderer writes `current_date()`, which Postgres rejects with
+    // `syntax error at or near "("`. Unoptimized on purpose: the optimizer
+    // folds `current_date` into a literal, which would hide the rendering.
+    let ctx = ctx().await;
+    let p = plan(
+        &ctx,
+        "SELECT current_date AS d, current_time AS t, (current_date)::date - o_orderdate AS age \
+         FROM orders",
+    )
+    .await;
+    for sql in [duck(&p), pg(&p)] {
+        let lower = sql.to_lowercase();
+        assert!(!lower.contains("current_date("), "keyword rendered as a call:\n{sql}");
+        assert!(!lower.contains("current_time("), "keyword rendered as a call:\n{sql}");
+        assert!(lower.contains("current_date"), "{sql}");
+        assert!(lower.contains("current_time"), "{sql}");
+    }
+
+    // dee re-plans what it writes, with DataFusion's Postgres parser dialect.
+    ctx.sql("SET datafusion.sql_parser.dialect = 'PostgreSQL'")
+        .await
+        .unwrap();
+    let sql = pg(&p);
+    ctx.state()
+        .create_logical_plan(&sql)
+        .await
+        .unwrap_or_else(|e| panic!("the bare keyword must plan back: {e}\n{sql}"));
+}
+
 // -- the standing contract --------------------------------------------------
 
 #[tokio::test]

@@ -82,6 +82,15 @@ where a caller cannot forget them:
   show to be integral, and `/` for the rest. That takes round-trip failures to
   zero.
 
+One more correction applies to every dialect, before delegation:
+
+- **Niladic keywords (U15).** DataFusion plans `current_date` and
+  `current_time` as zero-argument functions, which the delegate renders as
+  `current_date()` — a syntax error in Postgres and SQLite. They are emitted as
+  the bare keywords, which every target accepts and DataFusion parses back.
+  (`current_timestamp` is planned as `now()`, which both DuckDB and Postgres
+  accept, and is left as is.)
+
 ## Running the corpus
 
 ```sh
