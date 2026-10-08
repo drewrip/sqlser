@@ -22,10 +22,7 @@ use support::{ctx, ctx_with, opt_plan, plan};
 /// `duckdb tpch.duckdb -c "INSTALL tpch; LOAD tpch; CALL dbgen(sf=0.01)"`.
 fn duck_db_path() -> Option<String> {
     let p = std::env::var("TPCH_DB").unwrap_or_else(|_| "tpch.duckdb".into());
-    // Tests run from the crate directory; the fixture lives at the workspace root.
-    [p.clone(), format!("../{p}")]
-        .into_iter()
-        .find(|c| std::path::Path::new(c).exists())
+    std::path::Path::new(&p).exists().then_some(p)
 }
 
 fn duck(sql: &str) -> Option<String> {

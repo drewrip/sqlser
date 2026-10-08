@@ -1,8 +1,8 @@
 [package]
 name = "sqlser"
-authors.workspace = true
-version.workspace = true
-edition.workspace = true
+authors = ["Drew Ripberger <aripberg@cs.cmu.edu>"]
+version = "0.1.0"
+edition = "2024"
 description = "Sound LogicalPlan -> SQL serialization for DataFusion"
 
 [dependencies]
